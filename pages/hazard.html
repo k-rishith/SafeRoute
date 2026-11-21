@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeRoute — Hazard Detail</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<main class="section">
+  <div class="container" id="detail"></div>
+</main>
+<div id="footer-placeholder"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/config.js"></script>
+<script src="../js/supabase.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/api.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const id = params.get('id') || 'h1';
+const h = SR.getHazard(id);
+const d = document.getElementById('detail');
+if(!h){ d.innerHTML='<div class="empty-state">Hazard not found.</div>'; }
+else {
+  d.innerHTML = `
+  <p class="eyebrow">${h.category.toUpperCase()}</p>
+  <h2>${h.category}</h2>
+  <div style="display:flex;gap:8px;margin:12px 0">${SR.badgeSeverity(h.severity)} ${SR.badgeStatus(h.status)}</div>
+  ${h.imageUrl ? `<img src="${h.imageUrl}" alt="Hazard evidence" style="width:100%;max-height:400px;object-fit:cover;border-radius:10px;margin:16px 0">` : ''}
+  <p>${h.description}</p>
+  <p class="muted">Reported ${SR.timeAgo(h.reportedAt)} · Last verified ${SR.timeAgo(h.lastVerifiedAt)} · Confidence ${h.confidence}%</p>
+  <div class="card" style="margin:24px 0">
+    <h4>Community Confidence</h4>
+    <div style="display:flex;align-items:center;gap:16px;margin-top:12px">
+      <div class="confidence-ring">${h.confidence}%</div>
+      <div>
+        <p>${h.verifiedCount} users verified this hazard.</p>
+        <p class="muted">${h.disputedCount} disputed.</p>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-success" onclick="SR.toast('Verified','success')">Verify</button>
+    <button class="btn btn-danger" onclick="SR.toast('Reported as incorrect','info')">Report as Incorrect</button>
+    <button class="btn btn-secondary" onclick="SR.toast('Comment added','info')">Comment</button>
+  </div>
+  <h3 style="margin-top:32px">Status History</h3>
+  <div style="margin-top:12px">${(h.statusHistory||[]).map(s=>`<div style="padding:8px 0;border-bottom:1px solid var(--border)"><strong>${s.status}</strong> <span class="muted">${SR.formatDate(s.at)} · ${s.by}</span></div>`).join('')}</div>
+  <h3 style="margin-top:32px">Comments</h3>
+  <div style="margin-top:12px">${(h.comments||[]).map(c=>`<div style="padding:8px 0;border-bottom:1px solid var(--border)"><strong>${c.user}</strong> <span class="muted">${SR.timeAgo(c.at)}</span><p>${c.text}</p></div>`).join('')}</div>
+  ${h.status==='Resolved' && h.resolutionImageUrl ? `<h3 style="margin-top:32px">Before / After</h3><div class="before-after" style="margin-top:12px"><div><p class="eyebrow">BEFORE</p><img src="${h.imageUrl}"></div><div><p class="eyebrow">AFTER</p><img src="${h.resolutionImageUrl}"></div></div>` : ''}
+  `;
+}
+SR.injectLayout('Map');
+</script>
+</body>
+</html>

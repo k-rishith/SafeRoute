@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeRoute — Community</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<main class="section">
+  <div class="container">
+    <p class="eyebrow">COMMUNITY VALIDATION</p>
+    <h2>Is this hazard still present?</h2>
+    <p class="muted" style="max-width:720px;margin:12px 0 28px">Confirm whether a reported hazard is still there. Your response helps keep community road information current.</p>
+    <div id="list"></div>
+  </div>
+</main>
+<div id="footer-placeholder"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/config.js"></script>
+<script src="../js/supabase.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/api.js"></script>
+<script>
+const responseKey='sr-community-responses';
+const countKey='sr-community-count-overrides';
+function readStore(key,fallback={}){try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch(e){return fallback}}
+function getResponses(){return readStore(responseKey,{})}
+function saveResponses(value){localStorage.setItem(responseKey,JSON.stringify(value))}
+function getCountOverrides(){return readStore(countKey,{})}
+function saveCountOverrides(value){localStorage.setItem(countKey,JSON.stringify(value))}
+function responseContribution(verdict){
+  return {verified:['verified','resolved'].includes(verdict)?1:0,disputed:verdict==='disputed'?1:0};
+}
+function verificationPercentage(hazard){
+  const verified=Number(hazard.verifiedCount||0);
+  const disputed=Number(hazard.disputedCount||0);
+  const total=verified+disputed;
+  return total>0?Math.round((verified/total)*100):0;
+}
+let communityHazards=[];
+let rendering=false,renderQueued=false,communityRealtimeChannel=null,communityRefreshTimer=null;
+
+async function renderCommunity(){
+  if(rendering){renderQueued=true;return;}
+  rendering=true;
+  try{
+    const baseHazards=await SR.api.listHazards();
+    const overrides=getCountOverrides();
+    communityHazards=baseHazards.map(h=>{
+      const extra=overrides[String(h.id)]||{};
+      const baseVerified=Number(h.verifiedCount||0),baseDisputed=Number(h.disputedCount||0);
+      const result={...h,_baseVerifiedCount:baseVerified,_baseDisputedCount:baseDisputed,
+        verifiedCount:Math.max(0,baseVerified+Number(extra.verifiedDelta||0)),
+        disputedCount:Math.max(0,baseDisputed+Number(extra.disputedDelta||0))};
+      return {...result,confidence:verificationPercentage(result)};
+    });
+    const responses=getResponses();
+    const items=communityHazards.filter(h=>h.status!=='Resolved'&&h.status!=='Rejected').slice(0,8);
+    document.getElementById('list').innerHTML=items.map(h=>{
+      const response=responses[h.id];
+      return `<article class="card" style="margin-bottom:16px" id="community-${h.id}">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <div><strong>${h.category}</strong> ${SR.badgeSeverity(h.severity)} ${SR.badgeStatus(h.status)}</div>
+          <span class="muted">${SR.timeAgo(h.reportedAt||h.reported_at)}</span>
+        </div>
+        <p style="margin:8px 0">${h.description||'Community road hazard report.'}</p>
+        <div style="display:flex;align-items:center;gap:16px;margin:12px 0">
+          <div class="confidence-ring" id="community-confidence-${h.id}" role="img" aria-label="${h.confidence}% community verification" title="Verified share of all community responses" style="width:60px;height:60px;font-size:16px">${h.confidence}%</div>
+          <span class="muted" id="community-count-${h.id}">${h.verifiedCount} verified · ${h.disputedCount} disputed</span>
+        </div>
+        <div id="response-state-${h.id}">${response?responseSubmittedHtml(response):responseChoicesHtml(h.id)}</div>
+      </article>`;
+    }).join('')||'<div class="empty-state">No hazards need community validation right now.</div>';
+  }catch(error){
+    console.error('Could not refresh community reports:',error);
+    SR.toast('Could not refresh community reports','error');
+  }finally{
+    rendering=false;
+    if(renderQueued){renderQueued=false;renderCommunity();}
+  }
+}
+
+function responseChoicesHtml(id){
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-success" type="button" onclick="submitResponse('${id}','verified','Still Present')">✓ Still Present</button>
+    <button class="btn btn-secondary" type="button" onclick="submitResponse('${id}','resolved','Resolved / Gone')">✓ Resolved / Gone</button>
+    <button class="btn btn-danger" type="button" onclick="submitResponse('${id}','disputed','Not Accurate')">! Not Accurate</button>
+  </div>`;
+}
+function responseSubmittedHtml(response){
+  return `<div class="response-submitted"><strong>✓ Response Submitted</strong><p style="margin:4px 0 10px">Your response: ${response.label}</p><button class="btn btn-secondary" type="button" style="padding:7px 12px;font-size:12px" onclick="changeResponse('${response.hazardId}')">Change Response</button></div>`;
+}
+
+function updateDemoCounter(hazardId,verdict){
+  const overrides=getCountOverrides();
+  const id=String(hazardId);
+  const entry=overrides[id]||{verifiedDelta:0,disputedDelta:0,verdict:null};
+  if(entry.verdict){
+    const old=responseContribution(entry.verdict);
+    entry.verifiedDelta-=old.verified;
+    entry.disputedDelta-=old.disputed;
+  }
+  const next=responseContribution(verdict);
+  entry.verifiedDelta+=next.verified;
+  entry.disputedDelta+=next.disputed;
+  entry.verdict=verdict;
+  overrides[id]=entry;
+  saveCountOverrides(overrides);
+
+  const hazard=communityHazards.find(item=>String(item.id)===id);
+  if(hazard){
+    hazard.verifiedCount=Math.max(0,hazard._baseVerifiedCount+entry.verifiedDelta);
+    hazard.disputedCount=Math.max(0,hazard._baseDisputedCount+entry.disputedDelta);
+    hazard.confidence=verificationPercentage(hazard);
+    const counter=document.getElementById(`community-count-${id}`);
+    if(counter)counter.textContent=`${hazard.verifiedCount} verified · ${hazard.disputedCount} disputed`;
+    const percentage=document.getElementById(`community-confidence-${id}`);
+    if(percentage){percentage.textContent=`${hazard.confidence}%`;percentage.setAttribute('aria-label',`${hazard.confidence}% community verification`);}
+  }
+}
+
+async function submitResponse(id,verdict,label){
+  const btns=document.querySelectorAll(`#community-${CSS.escape(id)} button`);
+  btns.forEach(button=>button.disabled=true);
+  const ok=await SR.api.verifyHazard(id,verdict);
+  if(!ok){btns.forEach(button=>button.disabled=false);return;}
+  if(SR.useMock||!SR.supabase)updateDemoCounter(id,verdict);
+  const responses=getResponses();
+  responses[id]={hazardId:id,verdict,label,submittedAt:new Date().toISOString()};
+  saveResponses(responses);
+  const state=document.getElementById(`response-state-${id}`);
+  if(state)state.innerHTML=responseSubmittedHtml(responses[id]);
+  if(!SR.useMock&&SR.supabase)renderCommunity();
+}
+function changeResponse(id){
+  const state=document.getElementById(`response-state-${id}`);
+  if(state)state.innerHTML=responseChoicesHtml(id);
+}
+
+renderCommunity();
+SR.injectLayout('Community');
+communityRealtimeChannel=SR.api.subscribeHazards?.(()=>renderCommunity())||null;
+communityRefreshTimer=setInterval(()=>renderCommunity(),15000);
+window.addEventListener('storage',event=>{
+  if([responseKey,countKey].includes(event.key))renderCommunity();
+});
+window.addEventListener('beforeunload',()=>{
+  if(communityRefreshTimer)clearInterval(communityRefreshTimer);
+  if(communityRealtimeChannel)SR.supabase?.removeChannel(communityRealtimeChannel);
+});
+</script>
+</body>
+</html>

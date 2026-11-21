@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeRoute — Routes</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<main class="section">
+  <div class="container">
+    <p class="eyebrow">ROUTE HAZARD EXPOSURE · HYDERABAD</p>
+    <h2>Choose with more road information.</h2>
+    <p style="max-width:720px;margin-top:12px">Compare illustrative route options using known reports, severity and travel estimates. These demo routes are not turn-by-turn navigation.</p>
+
+    <div class="route-box" id="routes" style="margin-top:28px"></div>
+
+    <section class="card route-planner" aria-labelledby="routePlannerTitle">
+      <div class="live-map-heading">
+        <div>
+          <p class="eyebrow">PLAN A CUSTOM ROUTE</p>
+          <h3 id="routePlannerTitle">Add / Check Route</h3>
+          <p class="muted" style="margin-top:8px;max-width:680px">Add two or more locations using coordinates, or turn on map selection and click the map to add stops. SafeRoute checks for reported hazards within 300 metres of the straight-line route.</p>
+        </div>
+      </div>
+      <form id="routeLocationForm" class="route-location-form">
+        <div class="form-group">
+          <label class="form-label" for="stopName">Location name</label>
+          <input class="input" id="stopName" name="stopName" maxlength="60" placeholder="e.g. Home, Office, Destination">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="stopLat">Latitude</label>
+          <input class="input" id="stopLat" name="stopLat" type="number" step="any" min="-90" max="90" placeholder="17.3850" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="stopLng">Longitude</label>
+          <input class="input" id="stopLng" name="stopLng" type="number" step="any" min="-180" max="180" placeholder="78.4867" required>
+        </div>
+        <button class="btn btn-secondary route-add-location" type="submit">＋ Add Location</button>
+      </form>
+      <div class="route-planner-actions">
+        <button class="btn btn-secondary" id="mapPickToggle" type="button" aria-pressed="false">＋ Add Locations from Map</button>
+        <button class="btn btn-secondary" id="clearCustomRoute" type="button">Clear Locations</button>
+        <button class="btn btn-primary" id="checkCustomRoute" type="button" disabled>Check Route →</button>
+      </div>
+      <div class="route-stop-list-wrap">
+        <strong>Added locations</strong>
+        <ol id="customRouteStops" class="route-stop-list"><li class="muted">No locations added yet.</li></ol>
+      </div>
+      <div id="customRouteResults" class="route-results" aria-live="polite">
+        <p class="muted">Add at least two locations, then select Check Route to review nearby reports.</p>
+      </div>
+    </section>
+
+    <div class="route-map-wrap">
+      <div class="live-map-heading">
+        <div><p class="eyebrow">SELECTED ROUTE &amp; CUSTOM LOCATIONS</p><h3 id="selectedRouteTitle">Route A — Outer Ring Bypass</h3></div>
+        <span class="badge badge-verified" id="selectedRouteBadge">LOWER REPORTED HAZARD EXPOSURE</span>
+      </div>
+      <div class="live-map-wrap route-map-frame">
+        <div id="routeMap" role="application" aria-label="Illustrative route comparison map in Hyderabad"></div>
+        <div class="map-meta"><span id="routeMapStatus">Sample routes are shown on the map.</span><span>© OpenStreetMap contributors</span></div>
+      </div>
+      <div class="route-detail-panel" id="routeDetails"></div>
+      <p class="muted" style="font-size:12px;margin-top:10px">Route geometry, distance and estimated travel times are illustrative demo values. Custom route checks use straight lines between your locations, not turn-by-turn road directions. Reported hazards may be incomplete or out of date.</p>
+    </div>
+  </div>
+</main>
+<div id="footer-placeholder"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/config.js"></script>
+<script src="../js/supabase.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/api.js"></script>
+<script>
+const routeOptions = [
+  {id:'A',name:'Route A — Outer Ring Bypass',distance:8.4,time:32,hazards:1,highSeverity:0,tag:'LOWER REPORTED HAZARD EXPOSURE',score:12,color:'#3B82F6',
+   points:[[17.3850,78.4867],[17.3910,78.4775],[17.3990,78.4725],[17.4080,78.4795],[17.4170,78.4900]],hazardIds:['hyd-010']},
+  {id:'B',name:'Route B — Central Avenue Corridor',distance:7.2,time:28,hazards:6,highSeverity:2,tag:'MORE REPORTED HAZARDS',score:68,color:'#F97316',
+   points:[[17.3850,78.4867],[17.3890,78.4970],[17.3970,78.5040],[17.4070,78.5000],[17.4170,78.4900]],hazardIds:['hyd-001','hyd-003','hyd-004','hyd-005','hyd-008','hyd-012']}
+];
+let routeMap=null, routeLines={}, activeRoute='A', mapHazardLayer=null;
+let customRouteLayer=null, customHazardLayer=null, customStops=[], mapPickMode=false;
+const ROUTE_HAZARD_RADIUS_METERS=300;
+const byId=id=>document.getElementById(id);
+const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function renderRouteCards(){
+  byId('routes').innerHTML=routeOptions.map(r=>`
+    <article class="card route-card ${r.id==='A'?'recommended':''} ${r.id===activeRoute?'is-selected':''}" id="route-card-${r.id}">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap">
+        <div><h4>${r.name}</h4><span class="route-tag">${r.tag}</span></div>
+        ${r.id==='A'?'<span class="badge badge-verified">RECOMMENDED</span>':'<span class="badge badge-high">MORE HAZARDS</span>'}
+      </div>
+      <div style="display:flex;gap:24px;margin:16px 0;flex-wrap:wrap">
+        <div><div class="stat-number" style="font-size:28px">${r.time} min</div><div class="stat-label">Travel Time</div></div>
+        <div><div class="stat-number" style="font-size:28px">${r.distance} km</div><div class="stat-label">Distance</div></div>
+        <div><div class="stat-number" style="font-size:28px">${r.hazards}</div><div class="stat-label">Known Hazards</div></div>
+        <div><div class="stat-number" style="font-size:28px">${r.highSeverity}</div><div class="stat-label">High / Critical</div></div>
+      </div>
+      <p class="muted">${r.id==='A'?'One low-severity report near the route.':'Recent high-severity reports along this corridor.'}</p>
+      <div class="route-actions">
+        <button class="btn btn-primary" type="button" onclick="selectRoute('${r.id}')">Select Route ${r.id} →</button>
+        <button class="btn btn-secondary" type="button" onclick="reviewHazards('${r.id}')">Review Hazards →</button>
+      </div>
+    </article>`).join('');
+}
+
+function initRouteMap(){
+  if(!window.L){byId('routeMap').innerHTML='<p class="map-error">Map library failed to load. Check your connection and reload.</p>';return;}
+  routeMap=L.map('routeMap',{scrollWheelZoom:false}).setView([17.401,78.489],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(routeMap);
+  routeOptions.forEach(r=>{
+    routeLines[r.id]=L.polyline(r.points,{color:r.color,weight:5,opacity:r.id==='A'?.95:.45,dashArray:r.id==='B'?'8 8':null}).addTo(routeMap);
+    routeLines[r.id].on('click',()=>selectRoute(r.id));
+  });
+  mapHazardLayer=L.layerGroup().addTo(routeMap);
+  SR.mock.hazards.forEach(h=>{
+    const color=h.severity==='Critical'?'#EF4444':h.severity==='High'?'#F97316':'#D6B84C';
+    L.circleMarker([h.lat,h.lng],{radius:7,color:'#24231F',weight:2,fillColor:color,fillOpacity:.95})
+      .bindPopup(`<strong>${escapeHTML(h.category)}</strong><br>${escapeHTML(h.severity)} · ${escapeHTML(h.status)}<br>${escapeHTML(h.description)}`).addTo(mapHazardLayer);
+  });
+  L.marker(routeOptions[0].points[0]).bindPopup('Demo origin · Hyderabad').addTo(routeMap);
+  L.marker(routeOptions[0].points.at(-1)).bindPopup('Demo destination · Hyderabad').addTo(routeMap);
+  customRouteLayer=L.layerGroup().addTo(routeMap);
+  customHazardLayer=L.layerGroup().addTo(routeMap);
+  routeMap.on('click',event=>{
+    if(!mapPickMode)return;
+    addRouteStop({name:`Map location ${customStops.length+1}`,lat:event.latlng.lat,lng:event.latlng.lng});
+  });
+  selectRoute('A');
+  setTimeout(()=>routeMap.invalidateSize(),200);
+}
+
+function selectRoute(id){
+  const route=routeOptions.find(r=>r.id===id); if(!route)return;
+  activeRoute=id;
+  routeOptions.forEach(r=>{
+    routeLines[r.id]?.setStyle({opacity:r.id===id?1:.30,weight:r.id===id?7:4});
+    byId(`route-card-${r.id}`)?.classList.toggle('is-selected',r.id===id);
+  });
+  byId('selectedRouteTitle').textContent=route.name;
+  byId('selectedRouteBadge').textContent=route.tag;
+  byId('routeDetails').innerHTML=`
+    <strong>${route.name} selected</strong>
+    <div class="route-detail-grid">
+      <div><strong>${route.time} min</strong><span>Estimated travel time</span></div>
+      <div><strong>${route.distance} km</strong><span>Distance</span></div>
+      <div><strong>${route.hazards}</strong><span>Known hazards</span></div>
+      <div><strong>${route.highSeverity}</strong><span>High / critical hazards</span></div>
+    </div>
+    <p class="muted" style="margin-top:12px;font-size:12px">${route.id==='A'?'This option currently has lower reported hazard exposure.':'This option is shorter by distance and time, but has more reported hazards.'}</p>`;
+  if(routeMap && routeLines[id])routeMap.fitBounds(routeLines[id].getBounds(),{padding:[35,35]});
+  SR.toast(`Route ${id} selected. Route line and estimates updated.`,'success');
+}
+
+function reviewHazards(id){
+  const route=routeOptions.find(r=>r.id===id); if(!route)return;
+  const selected=SR.mock.hazards.filter(h=>route.hazardIds.includes(h.id));
+  const html=`<div class="modal-header"><h3>Hazards on Route ${id}</h3><button class="modal-close" aria-label="Close">×</button></div>
+    <p class="muted">${selected.length} illustrative report(s) associated with this demo corridor.</p>
+    ${selected.length?selected.map(h=>`<div style="padding:12px 0;border-bottom:1px solid var(--border)"><strong>${escapeHTML(h.category)}</strong> ${SR.badgeSeverity(h.severity)} ${SR.badgeStatus(h.status)}<p style="margin-top:5px">${escapeHTML(h.description)}</p><small class="muted">${SR.timeAgo(h.reportedAt)} · ${Number(h.lat).toFixed(4)}, ${Number(h.lng).toFixed(4)}</small></div>`).join(''):'<div class="empty-state">No sample hazards listed for this route.</div>'}`;
+  SR.modal(html);
+}
+
+function addRouteStop(stop){
+  if(!Number.isFinite(stop.lat)||!Number.isFinite(stop.lng)||Math.abs(stop.lat)>90||Math.abs(stop.lng)>180){
+    SR.toast('Enter valid latitude and longitude values','error');return;
+  }
+  customStops.push({name:String(stop.name||`Location ${customStops.length+1}`).trim()||`Location ${customStops.length+1}`,lat:stop.lat,lng:stop.lng});
+  renderCustomStops();
+  drawCustomRoute();
+  byId('routeMapStatus').textContent=`${customStops.length} custom location${customStops.length===1?'':'s'} added.`;
+}
+
+function renderCustomStops(){
+  const list=byId('customRouteStops');
+  list.innerHTML=customStops.length?customStops.map((stop,index)=>`
+    <li><span><strong>${index+1}. ${escapeHTML(stop.name)}</strong><small>${stop.lat.toFixed(5)}, ${stop.lng.toFixed(5)}</small></span>
+    <button class="btn btn-ghost" type="button" aria-label="Remove ${escapeHTML(stop.name)}" onclick="removeRouteStop(${index})">Remove</button></li>`).join(''):'<li class="muted">No locations added yet.</li>';
+  byId('checkCustomRoute').disabled=customStops.length<2;
+}
+
+function removeRouteStop(index){
+  customStops.splice(index,1);
+  renderCustomStops();
+  drawCustomRoute();
+  byId('customRouteResults').innerHTML='<p class="muted">Route changed. Select Check Route to refresh the hazard check.</p>';
+}
+
+function drawCustomRoute(){
+  if(!customRouteLayer)return;
+  customRouteLayer.clearLayers();
+  customHazardLayer?.clearLayers();
+  if(customStops.length){
+    if(customStops.length>1){
+      L.polyline(customStops.map(s=>[s.lat,s.lng]),{color:'#EAB308',weight:6,opacity:.95}).addTo(customRouteLayer);
+    }
+    customStops.forEach((stop,index)=>L.marker([stop.lat,stop.lng]).bindPopup(`<strong>${index+1}. ${escapeHTML(stop.name)}</strong>`).addTo(customRouteLayer));
+    if(routeMap && customStops.length>1){routeMap.fitBounds(L.latLngBounds(customStops.map(s=>[s.lat,s.lng])),{padding:[45,45],maxZoom:15});}
+    else if(routeMap){routeMap.setView([customStops[0].lat,customStops[0].lng],14);}
+  }
+}
+
+function setMapPickMode(enabled){
+  mapPickMode=enabled;
+  const button=byId('mapPickToggle');
+  button?.classList.toggle('active',enabled);
+  button?.setAttribute('aria-pressed',String(enabled));
+  if(button)button.textContent=enabled?'Click the map to add locations · Done':'＋ Add Locations from Map';
+  if(routeMap)routeMap.getContainer().style.cursor=enabled?'crosshair':'';
+  byId('routeMapStatus').textContent=enabled?'Map selection is active. Click the map to add a location.':'Map selection is off.';
+}
+
+function haversineMeters(a,b){
+  const toRad=value=>value*Math.PI/180;
+  const dLat=toRad(b.lat-a.lat),dLng=toRad(b.lng-a.lng);
+  const lat1=toRad(a.lat),lat2=toRad(b.lat);
+  const value=Math.sin(dLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+  return 6371000*2*Math.atan2(Math.sqrt(value),Math.sqrt(1-value));
+}
+
+function distanceToSegmentMeters(point,start,end){
+  const referenceLat=(point.lat+start.lat+end.lat)/3*Math.PI/180;
+  const scaleX=111320*Math.cos(referenceLat),scaleY=110540;
+  const ax=0,ay=0;
+  const bx=(end.lng-start.lng)*scaleX,by=(end.lat-start.lat)*scaleY;
+  const px=(point.lng-start.lng)*scaleX,py=(point.lat-start.lat)*scaleY;
+  const lengthSquared=bx*bx+by*by;
+  const t=lengthSquared?Math.max(0,Math.min(1,(px*bx+py*by)/lengthSquared)):0;
+  const dx=px-(ax+t*bx),dy=py-(ay+t*by);
+  return Math.sqrt(dx*dx+dy*dy);
+}
+
+async function checkCustomRoute(){
+  if(customStops.length<2){SR.toast('Add at least two locations to check a route','error');return;}
+  const button=byId('checkCustomRoute');
+  button.disabled=true;button.textContent='Checking…';
+  try{
+    const hazards=await SR.api.listHazards();
+    const segments=customStops.slice(0,-1).map((stop,index)=>[stop,customStops[index+1]]);
+    const nearby=hazards.filter(h=>h.status!=='Resolved'&&h.status!=='Rejected'&&h.lat!==null&&h.lat!==undefined&&h.lng!==null&&h.lng!==undefined&&h.lat!==''&&h.lng!==''&&Number.isFinite(Number(h.lat))&&Number.isFinite(Number(h.lng)))
+      .map(h=>({...h,distanceToRoute:Math.min(...segments.map(([a,b])=>distanceToSegmentMeters({lat:Number(h.lat),lng:Number(h.lng)},a,b)))}))
+      .filter(h=>h.distanceToRoute<=ROUTE_HAZARD_RADIUS_METERS)
+      .sort((a,b)=>a.distanceToRoute-b.distanceToRoute);
+    const totalDistance=segments.reduce((sum,[a,b])=>sum+haversineMeters(a,b),0)/1000;
+    const highCount=nearby.filter(h=>['High','Critical'].includes(h.severity)).length;
+    byId('customRouteResults').innerHTML=`
+      <div class="route-result-summary"><div><strong>${nearby.length}</strong><span>Reported hazards nearby</span></div><div><strong>${highCount}</strong><span>High / critical</span></div><div><strong>${totalDistance.toFixed(1)} km</strong><span>Approx. straight-line distance</span></div></div>
+      <p class="muted route-result-note">${nearby.length?'These reports are within 300 metres of the straight-line route. Review them before travelling.':'No active reports were found within 300 metres of this straight-line route.'}</p>
+      ${nearby.length?`<div class="route-hazard-list">${nearby.map(h=>`<article><div><strong>${escapeHTML(h.category)}</strong> ${SR.badgeSeverity(h.severity)} ${SR.badgeStatus(h.status)}</div><p>${escapeHTML(h.description||'Community road hazard report.')}</p><small class="muted">About ${Math.round(h.distanceToRoute)} m from the route · ${SR.timeAgo(h.reportedAt||h.reported_at)}</small></article>`).join('')}</div>`:''}`;
+    customHazardLayer.clearLayers();
+    nearby.forEach(h=>{
+      const color=h.severity==='Critical'?'#EF4444':h.severity==='High'?'#F97316':'#D6B84C';
+      L.circleMarker([Number(h.lat),Number(h.lng)],{radius:9,color:'#24231F',weight:2,fillColor:color,fillOpacity:1})
+        .bindPopup(`<strong>${escapeHTML(h.category)} · ${escapeHTML(h.severity)}</strong><br>${escapeHTML(h.description||'Community road hazard report')}<br><small>${Math.round(h.distanceToRoute)} m from route</small>`).addTo(customHazardLayer);
+    });
+    byId('routeMapStatus').textContent=`Custom route checked: ${customStops.length} locations · ${nearby.length} reported hazards within 300 m.`;
+    if(routeMap&&customStops.length>1)routeMap.fitBounds(L.latLngBounds(customStops.map(s=>[s.lat,s.lng])),{padding:[45,45],maxZoom:15});
+  }catch(error){
+    console.error('Custom route check failed:',error);
+    SR.toast('Could not check this route. Please try again.','error');
+  }finally{
+    button.disabled=customStops.length<2;button.textContent='Check Route →';
+  }
+}
+
+byId('routeLocationForm').addEventListener('submit',event=>{
+  event.preventDefault();
+  const name=byId('stopName').value.trim();
+  const lat=Number(byId('stopLat').value),lng=Number(byId('stopLng').value);
+  if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180){SR.toast('Enter valid latitude and longitude values','error');return;}
+  addRouteStop({name,lat,lng});
+  byId('stopName').value='';byId('stopLat').value='';byId('stopLng').value='';
+});
+byId('mapPickToggle').addEventListener('click',()=>setMapPickMode(!mapPickMode));
+byId('clearCustomRoute').addEventListener('click',()=>{
+  customStops=[];customHazardLayer?.clearLayers();
+  renderCustomStops();drawCustomRoute();setMapPickMode(false);
+  byId('customRouteResults').innerHTML='<p class="muted">Add at least two locations, then select Check Route to review nearby reports.</p>';
+  byId('routeMapStatus').textContent='Custom locations cleared.';
+});
+byId('checkCustomRoute').addEventListener('click',checkCustomRoute);
+
+renderRouteCards();
+renderCustomStops();
+SR.injectLayout('Routes');
+initRouteMap();
+</script>
+</body>
+</html>

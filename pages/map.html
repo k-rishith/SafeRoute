@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeRoute — Hazard Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<main class="section">
+  <div class="container">
+    <p class="eyebrow">INTERACTIVE HAZARD MAP · HYDERABAD</p>
+    <h2>Road conditions, mapped.</h2>
+    <p style="margin-top:12px;max-width:700px">Filter community reports by hazard type and severity. Select any marker to inspect its report.</p>
+    <div class="map-toolbar" aria-label="Hazard map filters">
+      <button class="map-filter active" data-hazard-filter="all">All Hazards</button>
+      <button class="map-filter" data-hazard-filter="potholes">Potholes</button>
+      <button class="map-filter" data-hazard-filter="streetlights">Streetlights</button>
+      <button class="map-filter" data-hazard-filter="waterlogging">Waterlogging</button>
+      <button class="map-filter" data-hazard-filter="critical">Critical Only</button>
+      <button class="btn btn-secondary map-refresh" id="mapRefresh" type="button">↻ Refresh</button>
+    </div>
+    <div class="live-map-wrap">
+      <div id="map" role="application" aria-label="Interactive map of road hazards in Hyderabad"></div>
+      <div class="map-empty" id="mapEmpty" hidden>No reports match this filter.</div>
+      <div class="map-meta"><span id="mapResultCount">Loading road reports…</span><span id="mapLastUpdated">Loading map data…</span></div>
+    </div>
+  </div>
+</main>
+<div id="footer-placeholder"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/config.js"></script>
+<script src="../js/supabase.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/map-view.js"></script>
+<script>SR.injectLayout('Map'); SR.MapView.init('map');</script>
+</body>
+</html>

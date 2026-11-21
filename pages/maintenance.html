@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeRoute — Maintenance</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<main class="section">
+  <div class="container">
+    <p class="eyebrow">CIVIC RESOLUTION</p>
+    <h2>Before / After Evidence</h2>
+    <p class="muted" style="max-width:720px;margin:12px 0 28px">Upload timestamped photographs showing the road condition before and after maintenance. In demo mode, previews are saved in this browser only.</p>
+    <div id="list"></div>
+  </div>
+</main>
+<div id="footer-placeholder"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/config.js"></script>
+<script src="../js/supabase.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/api.js"></script>
+<script>
+const beforePlaceholder='../assets/images/road-before.svg';
+const afterPlaceholder='../assets/images/road-after.svg';
+let maintenanceHazards=[];
+function savedEvidence(id,kind){try{return localStorage.getItem(`sr-evidence-${id}-${kind}`)||''}catch(e){return ''}}
+async function renderMaintenance(){
+  maintenanceHazards=(await SR.api.listHazards()).filter(h=>['Assigned','In Progress','Resolved'].includes(h.status)).slice(0,8);
+  document.getElementById('list').innerHTML=maintenanceHazards.map(h=>{
+    const before=savedEvidence(h.id,'before')||h.imageUrl||beforePlaceholder;
+    const after=savedEvidence(h.id,'after')||h.resolutionImageUrl||afterPlaceholder;
+    return `<article class="card" style="margin-bottom:20px;border-left:4px solid var(--maintenance)" id="maintenance-${h.id}">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center">
+        <div><strong>${h.category}</strong> ${SR.badgeSeverity(h.severity)} ${SR.badgeStatus(h.status)}</div>
+        <span class="muted">${h.assignedTo||'Maintenance team pending'}</span>
+      </div>
+      <p style="margin:8px 0">${h.description||'Road hazard maintenance record.'}</p>
+      <p class="muted">${Number(h.lat).toFixed(4)}, ${Number(h.lng).toFixed(4)}</p>
+      <div class="evidence-grid">
+        <div class="evidence-panel">
+          <strong>BEFORE REPAIR</strong>
+          <img id="before-preview-${h.id}" src="${before}" alt="Before maintenance evidence">
+          <input type="file" id="before-file-${h.id}" accept="image/png,image/jpeg,image/webp" onchange="previewEvidence('${h.id}','before',this)">
+          <button class="btn btn-secondary" style="margin-top:10px" type="button" onclick="saveEvidence('${h.id}','before')">Save Before Photo</button>
+        </div>
+        <div class="evidence-panel">
+          <strong>AFTER REPAIR</strong>
+          <img id="after-preview-${h.id}" src="${after}" alt="After maintenance evidence">
+          <input type="file" id="after-file-${h.id}" accept="image/png,image/jpeg,image/webp" onchange="previewEvidence('${h.id}','after',this)">
+          <button class="btn btn-secondary" style="margin-top:10px" type="button" onclick="saveEvidence('${h.id}','after')">Save After Photo</button>
+        </div>
+      </div>
+      <p class="muted" id="evidence-status-${h.id}" style="font-size:12px;margin-top:12px">Evidence can be previewed before saving.</p>
+    </article>`;
+  }).join('')||'<div class="empty-state">No assigned or resolved hazards are available for evidence updates.</div>';
+}
+function previewEvidence(id,kind,input){
+  const file=input.files?.[0];if(!file)return;
+  if(!file.type.startsWith('image/')){SR.toast('Select an image file','error');input.value='';return;}
+  if(file.size>8*1024*1024){SR.toast('Image must be smaller than 8 MB','error');input.value='';return;}
+  const url=URL.createObjectURL(file);
+  const img=document.getElementById(`${kind}-preview-${id}`);
+  img.src=url;
+  document.getElementById(`evidence-status-${id}`).textContent=`${kind==='before'?'Before':'After'} photograph selected. Choose Save to store it.`;
+}
+async function saveEvidence(id,kind){
+  const input=document.getElementById(`${kind}-file-${id}`);
+  const file=input?.files?.[0];
+  if(!file){SR.toast(`Choose a ${kind} photograph first`,'error');return;}
+  const result=await SR.api.uploadEvidence(id,file,kind);
+  if(result?.url){document.getElementById(`${kind}-preview-${id}`).src=result.url;document.getElementById(`evidence-status-${id}`).textContent=`${kind==='before'?'Before':'After'} photograph saved${result.localOnly?' locally in this browser':'.'}`;input.value='';}
+}
+renderMaintenance();
+SR.injectLayout('Dashboard');
+</script>
+</body>
+</html>

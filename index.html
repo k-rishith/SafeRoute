@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeRoute — Know the Road Before You Take It</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<main>
+  <section class="section" style="padding-top:80px">
+    <div class="container">
+      <p class="eyebrow">COMMUNITY ROAD INTELLIGENCE</p>
+      <h1 style="max-width:900px">Know the Road<br>Before You Take It.</h1>
+      <p style="font-size:20px;max-width:600px;margin:24px 0 32px">Report, verify and discover road hazards with your community.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <a href="pages/report.html" class="btn btn-primary">Report a Hazard →</a>
+        <a href="pages/routes.html" class="btn btn-secondary">Explore Routes</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="process">
+        <div class="process-step"><div class="num">01</div><h4>REPORT</h4><p>Tell us what is wrong.</p></div>
+        <div class="process-step"><div class="num">02</div><h4>VERIFY</h4><p>The community confirms what is happening.</p></div>
+        <div class="process-step"><div class="num">03</div><h4>ROUTE</h4><p>Find routes with lower reported hazard exposure.</p></div>
+        <div class="process-step"><div class="num">04</div><h4>RESOLVE</h4><p>Maintenance teams update the road condition.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section live-map-section" id="live-feed">
+    <div class="container">
+      <div class="live-map-heading">
+        <div>
+          <p class="eyebrow">INTERACTIVE INTELLIGENCE · HYDERABAD</p>
+          <h2>Live Road Hazard Map</h2>
+          <p style="max-width:650px;margin-top:10px">Explore community road reports around Hyderabad. Filter by issue type or severity to see what has been reported nearby.</p>
+        </div>
+        <a class="btn btn-secondary" href="pages/map.html">Open Full Map ↗</a>
+      </div>
+      <div class="map-toolbar" aria-label="Hazard map filters">
+        <button class="map-filter active" data-hazard-filter="all">All Hazards</button>
+        <button class="map-filter" data-hazard-filter="potholes">Potholes</button>
+        <button class="map-filter" data-hazard-filter="streetlights">Streetlights</button>
+        <button class="map-filter" data-hazard-filter="waterlogging">Waterlogging</button>
+        <button class="map-filter" data-hazard-filter="critical">Critical Only</button>
+        <button class="btn btn-secondary map-refresh" id="mapRefresh" type="button">↻ Refresh</button>
+      </div>
+      <div class="live-map-wrap">
+        <div id="homeMap" role="application" aria-label="Interactive map showing reported road hazards in Hyderabad"></div>
+        <div class="map-empty" id="mapEmpty" hidden>No reports match this filter.</div>
+        <div class="map-meta"><span id="mapResultCount">Loading road reports…</span><span id="mapLastUpdated">Loading map data…</span></div>
+      </div>
+      <p class="muted" style="font-size:12px;margin-top:10px">Demo mode uses illustrative Hyderabad reports. Connect your Supabase project to show shared community reports.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container grid-4">
+      <div class="stat"><div class="stat-number">2,480</div><div class="stat-label">Hazards Reported</div></div>
+      <div class="stat"><div class="stat-number">1,820</div><div class="stat-label">Community Verified</div></div>
+      <div class="stat"><div class="stat-number">640</div><div class="stat-label">Resolved</div></div>
+      <div class="stat"><div class="stat-number">18 min</div><div class="stat-label">Avg Verification</div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow">01 / REPORT</p>
+      <h2 style="max-width:700px">Make the road visible.</h2>
+      <p style="max-width:600px;margin:16px 0 32px">Report potholes, damaged surfaces, broken streetlights, blocked footpaths and other hazards directly from the road.</p>
+      <a href="pages/report.html" class="btn btn-primary">Report a Hazard →</a>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow">02 / VERIFY</p>
+      <h2 style="max-width:700px">Not every report tells the whole story.</h2>
+      <p style="max-width:600px;margin:16px 0 32px">Community verification helps distinguish real hazards from outdated or inaccurate reports.</p>
+      <a href="pages/community.html" class="btn btn-secondary">Join Community →</a>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow">CIVIC RESOLUTION</p>
+      <h2 style="max-width:760px">From reported damage to visible repair.</h2>
+      <p style="max-width:650px;margin:16px 0 28px">Maintenance teams can document the condition before and after work, giving the community a clearer resolution history.</p>
+      <div class="before-after">
+        <div class="card"><p class="eyebrow">BEFORE · ROAD DAMAGE</p><img src="assets/images/road-before.svg" alt="Illustration of damaged road before repair"><p class="muted" style="margin-top:10px">Reported road surface damage</p></div>
+        <div class="card"><p class="eyebrow">AFTER · RESOLVED</p><img src="assets/images/road-after.svg" alt="Illustration of repaired road surface"><p class="muted" style="margin-top:10px">Repair evidence submitted by the maintenance team</p></div>
+      </div>
+      <a href="pages/maintenance.html" class="btn btn-secondary" style="margin-top:18px">Open Civic Resolution →</a>
+    </div>
+  </section>
+
+  <section class="section" id="features">
+    <div class="container">
+      <p class="eyebrow">SAFER ROADS, TOGETHER</p>
+      <h2>Features</h2>
+      <p style="max-width:650px;margin:12px 0 28px">Everything you need to understand road conditions, contribute useful reports and check routes before you travel.</p>
+      <div class="grid grid-2 feature-grid">
+        <a class="card card-hover feature-card" href="pages/map.html">
+          <span class="feature-number">01</span><h3>Live Hazard Map</h3>
+          <p>Explore reported road issues and filter them by category or severity.</p><span class="feature-link">Explore the map →</span>
+        </a>
+        <a class="card card-hover feature-card" href="pages/routes.html">
+          <span class="feature-number">02</span><h3>Add / Check Route</h3>
+          <p>Add multiple locations and review reported hazards near your route.</p><span class="feature-link">Check a route →</span>
+        </a>
+        <a class="card card-hover feature-card" href="pages/report.html">
+          <span class="feature-number">03</span><h3>Report a Hazard</h3>
+          <p>Share the location, photo and details of a road hazard with the community.</p><span class="feature-link">Create a report →</span>
+        </a>
+        <a class="card card-hover feature-card" href="pages/community.html">
+          <span class="feature-number">04</span><h3>Community Verification</h3>
+          <p>Confirm whether reported hazards are still present or have been resolved.</p><span class="feature-link">Join the community →</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="faq">
+    <div class="container faq-layout">
+      <div>
+        <p class="eyebrow">HELP &amp; INFORMATION</p>
+        <h2>Frequently asked questions</h2>
+        <p style="max-width:440px;margin-top:12px">A few quick answers about how SafeRoute works.</p>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>What is SafeRoute?</summary>
+          <p>SafeRoute is a community-powered platform for reporting road hazards, checking reported conditions and reviewing route exposure.</p>
+        </details>
+        <details class="faq-item">
+          <summary>How do I report a road hazard?</summary>
+          <p>Open Report a Hazard, choose the issue category, add a photo if available, confirm its location and submit the report.</p>
+        </details>
+        <details class="faq-item">
+          <summary>How can I check hazards along a route?</summary>
+          <p>Open Routes, add at least two locations using map clicks or coordinates, then select Check Route to see nearby reported hazards.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Are all road reports verified in real time?</summary>
+          <p>Community responses and connected Supabase updates can refresh report counts. Demo data is illustrative and may not represent current road conditions.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+</main>
+<div id="footer-placeholder"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script src="js/api.js"></script>
+<script src="js/map-view.js"></script>
+<script>SR.injectLayout('Home'); SR.MapView.init('homeMap');</script>
+</body>
+</html>

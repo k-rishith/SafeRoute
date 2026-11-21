@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeRoute — Hyderabad Dashboard</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<style>
+.dashboard-page .dashboard-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:24px}
+.dashboard-page .dashboard-location{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border);border-radius:999px;color:var(--caution-light);background:var(--bg-card);font-size:12px;font-weight:700}
+.dashboard-page .dashboard-updated{color:var(--text-muted);font-size:12px;margin-top:10px}
+.dashboard-page .dashboard-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:24px 0}
+.dashboard-page .metric-card{position:relative;overflow:hidden;padding:20px;border:1px solid var(--border);border-radius:var(--radius-md);background:linear-gradient(145deg,var(--bg-card),var(--bg-dark))}
+.dashboard-page .metric-card:after{content:"";position:absolute;right:-22px;top:-28px;width:92px;height:92px;border:1px solid rgba(214,184,76,.17);border-radius:50%}
+.dashboard-page .metric-label{font-size:12px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.dashboard-page .metric-value{font-size:clamp(28px,4vw,38px);line-height:1.1;font-weight:800;margin:12px 0 7px;color:var(--text-primary);font-variant-numeric:tabular-nums}
+.dashboard-page .metric-note{font-size:12px;color:var(--text-muted)}
+.dashboard-page .dashboard-grid{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:16px;margin-top:16px}
+.dashboard-page .dashboard-panel{min-width:0;padding:22px}
+.dashboard-page .panel-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:20px}
+.dashboard-page .panel-heading h3{font-size:18px;margin:0}
+.dashboard-page .panel-heading p{font-size:12px;color:var(--text-muted);margin:6px 0 0}
+.dashboard-page .panel-kicker{font-size:10px;letter-spacing:.08em;color:var(--caution-light);font-weight:800;text-transform:uppercase}
+.dashboard-page .category-bars,.dashboard-page .status-bars{display:grid;gap:15px}
+.dashboard-page .bar-row{display:grid;grid-template-columns:minmax(110px, .9fr) minmax(80px,2fr) 34px;align-items:center;gap:12px;font-size:13px}
+.dashboard-page .bar-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary)}
+.dashboard-page .bar-track{height:9px;border-radius:99px;background:var(--bg-dark);overflow:hidden}
+.dashboard-page .bar-fill{height:100%;width:var(--bar-width);border-radius:inherit;background:var(--caution);min-width:0}
+.dashboard-page .bar-value{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:var(--text-primary)}
+.dashboard-page .hotspot-list{list-style:none;padding:0;margin:0;display:grid;gap:0}
+.dashboard-page .hotspot-list li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)}
+.dashboard-page .hotspot-rank{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:var(--bg-dark);color:var(--caution-light);font-size:11px;font-weight:800}
+.dashboard-page .hotspot-name{font-size:13px;font-weight:700;color:var(--text-primary)}
+.dashboard-page .hotspot-reports{font-size:12px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.dashboard-page .dashboard-bottom{display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);gap:16px;margin-top:16px}
+.dashboard-page .status-key{display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:13px;color:var(--text-secondary)}
+.dashboard-page .status-label{display:flex;align-items:center;gap:9px}
+.dashboard-page .status-dot{width:9px;height:9px;border-radius:50%;background:var(--status-color)}
+.dashboard-page .recent-list{list-style:none;margin:0;padding:0}
+.dashboard-page .recent-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+.dashboard-page .recent-title{font-size:13px;font-weight:700;color:var(--text-primary)}
+.dashboard-page .recent-meta{font-size:11px;color:var(--text-muted);margin-top:4px}
+.dashboard-page .recent-side{text-align:right;white-space:nowrap}
+.dashboard-page .recent-severity{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.dashboard-page .recent-time{font-size:11px;color:var(--text-muted);margin-top:5px}
+.dashboard-page .dashboard-empty{font-size:13px;color:var(--text-muted);padding:12px 0}
+@media(max-width:850px){.dashboard-page .dashboard-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-page .dashboard-grid,.dashboard-page .dashboard-bottom{grid-template-columns:1fr}}
+@media(max-width:480px){.dashboard-page .dashboard-panel{padding:17px}.dashboard-page .metric-card{padding:16px}.dashboard-page .bar-row{grid-template-columns:minmax(90px,1fr) minmax(60px,1.3fr) 26px;gap:8px}.dashboard-page .hotspot-list li{grid-template-columns:26px minmax(0,1fr) auto}}
+</style>
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<main class="section dashboard-page">
+  <div class="container">
+    <header class="dashboard-heading">
+      <div>
+        <p class="eyebrow">CITY ROAD INTELLIGENCE</p>
+        <h2>Hyderabad safety dashboard</h2>
+        <p class="muted" style="max-width:650px;margin-top:10px">A city-level view of community-reported road hazards, verification activity and the areas that need attention.</p>
+        <div class="dashboard-updated" id="dashboardUpdated">Loading Hyderabad report data…</div>
+      </div>
+      <div class="dashboard-location"><span aria-hidden="true">●</span> Hyderabad, Telangana</div>
+    </header>
+
+    <section class="dashboard-metrics" aria-label="Hyderabad road safety summary">
+      <article class="metric-card"><div class="metric-label">Total reports</div><div class="metric-value" id="metricReports">—</div><div class="metric-note">Community reports in the city feed</div></article>
+      <article class="metric-card"><div class="metric-label">Verified reports</div><div class="metric-value" id="metricVerified">—</div><div class="metric-note">Reports marked as verified</div></article>
+      <article class="metric-card"><div class="metric-label">Active hazards</div><div class="metric-value" id="metricActive">—</div><div class="metric-note">Reported, assigned or in review</div></article>
+      <article class="metric-card"><div class="metric-label">Resolved</div><div class="metric-value" id="metricResolved">—</div><div class="metric-note">Reports marked as resolved</div></article>
+    </section>
+
+    <section class="dashboard-grid">
+      <article class="card dashboard-panel">
+        <div class="panel-heading"><div><div class="panel-kicker">Report mix</div><h3>Hazards by category</h3><p>Distribution of reports across Hyderabad</p></div></div>
+        <div id="categoryBreakdown" class="category-bars"><div class="dashboard-empty">Loading category data…</div></div>
+      </article>
+      <article class="card dashboard-panel">
+        <div class="panel-heading"><div><div class="panel-kicker">Priority areas</div><h3>Road hazard hotspots</h3><p>Localities with the most sample or live reports</p></div></div>
+        <ol class="hotspot-list" id="hotspotList"><li class="dashboard-empty">Loading hotspot data…</li></ol>
+      </article>
+    </section>
+
+    <section class="dashboard-bottom">
+      <article class="card dashboard-panel">
+        <div class="panel-heading"><div><div class="panel-kicker">Report status</div><h3>City response snapshot</h3><p>Current status of reported hazards</p></div></div>
+        <div id="statusBreakdown" class="status-bars"><div class="dashboard-empty">Loading status data…</div></div>
+      </article>
+      <article class="card dashboard-panel">
+        <div class="panel-heading"><div><div class="panel-kicker">Latest activity</div><h3>Recent Hyderabad reports</h3><p>Most recently submitted road issues</p></div></div>
+        <ul class="recent-list" id="recentReports"><li class="dashboard-empty">Loading recent reports…</li></ul>
+      </article>
+    </section>
+  </div>
+</main>
+<div id="footer-placeholder"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/config.js"></script>
+<script src="../js/supabase.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/api.js"></script>
+<script>
+const numberFormat = new Intl.NumberFormat('en-IN');
+const hyderabadAreas = [
+  {name:'HITEC City',lat:17.4437,lng:78.3814},{name:'Madhapur',lat:17.4483,lng:78.3915},
+  {name:'Gachibowli',lat:17.4402,lng:78.3489},{name:'Kondapur',lat:17.4638,lng:78.3634},
+  {name:'Jubilee Hills',lat:17.4317,lng:78.4071},{name:'Banjara Hills',lat:17.4157,lng:78.4482},
+  {name:'Ameerpet',lat:17.4375,lng:78.4483},{name:'Begumpet',lat:17.4437,lng:78.4602},
+  {name:'Secunderabad',lat:17.4399,lng:78.4983},{name:'Tarnaka',lat:17.4283,lng:78.5380},
+  {name:'Uppal',lat:17.4015,lng:78.5591},{name:'Dilsukhnagar',lat:17.3688,lng:78.5247},
+  {name:'LB Nagar',lat:17.3457,lng:78.5522},{name:'Mehdipatnam',lat:17.3937,lng:78.4396},
+  {name:'Tolichowki',lat:17.4001,lng:78.4146},{name:'Attapur',lat:17.3678,lng:78.4250},
+  {name:'Charminar',lat:17.3616,lng:78.4747},{name:'Nampally',lat:17.3840,lng:78.4747},
+  {name:'Abids',lat:17.3890,lng:78.4747},{name:'KPHB Colony',lat:17.4938,lng:78.3991},
+  {name:'Kukatpally',lat:17.4849,lng:78.4138},{name:'Miyapur',lat:17.4968,lng:78.3592},
+  {name:'Financial District',lat:17.4184,lng:78.3418},{name:'Manikonda',lat:17.4048,lng:78.3762},
+  {name:'Nacharam',lat:17.4313,lng:78.5585}
+];
+function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
+function getHazardArea(hazard){
+  if(hazard.area)return hazard.area;
+  const address=hazard.locations?.[0]?.address||hazard.locations?.address||hazard.address;
+  if(address){
+    const match=String(address).match(/(KPHB|Kukatpally|Miyapur|Kondapur|HITEC City|Madhapur|Gachibowli|Jubilee Hills|Banjara Hills|Ameerpet|Begumpet|Secunderabad|Tarnaka|Uppal|Dilsukhnagar|LB Nagar|Mehdipatnam|Tolichowki|Attapur|Charminar|Nampally|Abids|Nacharam|Manikonda|Financial District)/i);
+    if(match)return match[0];
+  }
+  if(Number.isFinite(Number(hazard.lat))&&Number.isFinite(Number(hazard.lng))){
+    let nearest=null,nearestDistance=Infinity;
+    hyderabadAreas.forEach(area=>{const d=Math.hypot((Number(hazard.lat)-area.lat)*111,(Number(hazard.lng)-area.lng)*95);if(d<nearestDistance){nearestDistance=d;nearest=area.name;}});
+    if(nearestDistance<5)return nearest;
+  }
+  return 'Other Hyderabad areas';
+}
+function isHyderabadHazard(hazard){
+  if(hazard.area)return true;
+  const lat=Number(hazard.lat),lng=Number(hazard.lng);
+  if(Number.isFinite(lat)&&Number.isFinite(lng))return lat>=17.20&&lat<=17.60&&lng>=78.20&&lng<=78.70;
+  const address=String(hazard.locations?.[0]?.address||hazard.locations?.address||hazard.address||'');
+  return /hyderabad|telangana/i.test(address);
+}
+function setMetric(id,value){const node=document.getElementById(id);if(node)node.textContent=numberFormat.format(value);}
+function renderBars(targetId,entries,emptyText){
+  const target=document.getElementById(targetId);
+  if(!entries.length){target.innerHTML=`<div class="dashboard-empty">${emptyText}</div>`;return;}
+  const max=Math.max(1,...entries.map(entry=>entry.value));
+  target.innerHTML=entries.map(entry=>`<div class="bar-row"><span class="bar-label">${escapeHtml(entry.label)}</span><div class="bar-track"><div class="bar-fill" style="--bar-width:${Math.max(3,(entry.value/max)*100)}%"></div></div><span class="bar-value">${numberFormat.format(entry.value)}</span></div>`).join('');
+}
+async function refreshDashboard(){
+  try{
+    const allHazards=await SR.api.listHazards();
+    const hazards=allHazards.filter(isHyderabadHazard);
+    const verified=hazards.filter(h=>h.status==='Verified').length;
+    const resolved=hazards.filter(h=>h.status==='Resolved').length;
+    const active=hazards.filter(h=>['Reported','Under Review','Assigned','In Progress'].includes(h.status)).length;
+    setMetric('metricReports',hazards.length);setMetric('metricVerified',verified);setMetric('metricActive',active);setMetric('metricResolved',resolved);
+
+    const categoryCounts={};
+    hazards.forEach(h=>{const name=h.category||'Other';categoryCounts[name]=(categoryCounts[name]||0)+1;});
+    renderBars('categoryBreakdown',Object.entries(categoryCounts).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value),'No Hyderabad category data is available.');
+
+    const hotspotCounts={};
+    hazards.forEach(h=>{const name=getHazardArea(h);hotspotCounts[name]=(hotspotCounts[name]||0)+1;});
+    const hotspots=Object.entries(hotspotCounts).map(([name,reports])=>({name,reports})).sort((a,b)=>b.reports-a.reports).slice(0,8);
+    document.getElementById('hotspotList').innerHTML=hotspots.length?hotspots.map((h,index)=>`<li><span class="hotspot-rank">${index+1}</span><span class="hotspot-name">${escapeHtml(h.name)}</span><span class="hotspot-reports">${h.reports} ${h.reports===1?'report':'reports'}</span></li>`).join(''):'<li class="dashboard-empty">No Hyderabad hotspot data is available.</li>';
+
+    const statusEntries=[
+      {label:'Reported / under review',value:hazards.filter(h=>['Reported','Under Review'].includes(h.status)),color:'var(--caution)'},
+      {label:'Assigned / in progress',value:hazards.filter(h=>['Assigned','In Progress'].includes(h.status)),color:'#E28B42'},
+      {label:'Verified',value:hazards.filter(h=>h.status==='Verified'),color:'#4CAF79'},
+      {label:'Resolved',value:hazards.filter(h=>h.status==='Resolved'),color:'#6CA9A1'}
+    ].map(item=>({...item,value:item.value.length}));
+    const maxStatus=Math.max(1,...statusEntries.map(item=>item.value));
+    document.getElementById('statusBreakdown').innerHTML=statusEntries.map(item=>`<div><div class="status-key"><span class="status-label"><span class="status-dot" style="--status-color:${item.color}"></span>${item.label}</span><strong>${item.value}</strong></div><div class="bar-track" style="margin-top:8px"><div class="bar-fill" style="--bar-width:${Math.max(item.value?3:0,(item.value/maxStatus)*100)}%;background:${item.color}"></div></div></div>`).join('');
+
+    const recent=[...hazards].sort((a,b)=>new Date(b.reportedAt||b.reported_at||0)-new Date(a.reportedAt||a.reported_at||0)).slice(0,5);
+    document.getElementById('recentReports').innerHTML=recent.length?recent.map(h=>{
+      const time=SR.timeAgo(h.reportedAt||h.reported_at||h.created_at);
+      const severityColor={Critical:'#EF6461',High:'#E28B42',Medium:'var(--caution-light)',Low:'#6CA9A1'}[h.severity]||'var(--text-muted)';
+      return `<li><div><div class="recent-title">${escapeHtml(h.category||'Road hazard')}</div><div class="recent-meta">${escapeHtml(getHazardArea(h))} · ${escapeHtml(h.status||'Reported')}</div></div><div class="recent-side"><div class="recent-severity" style="color:${severityColor}">${escapeHtml(h.severity||'Unknown')}</div><div class="recent-time">${escapeHtml(time)}</div></div></li>`;
+    }).join(''):'<li class="dashboard-empty">No recent Hyderabad reports.</li>';
+    document.getElementById('dashboardUpdated').textContent=`Updated ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} · ${hazards.length} Hyderabad reports in the feed`;
+  }catch(error){
+    console.error('Could not refresh Hyderabad dashboard:',error);
+    document.getElementById('dashboardUpdated').textContent='Could not refresh report data. Please reload the dashboard.';
+  }
+}
+SR.injectLayout('Dashboard');
+refreshDashboard();
+const dashboardChannel=SR.api.subscribeHazards?.(()=>refreshDashboard())||null;
+const dashboardTimer=setInterval(refreshDashboard,30000);
+window.addEventListener('beforeunload',()=>{clearInterval(dashboardTimer);if(dashboardChannel)SR.supabase?.removeChannel(dashboardChannel);});
+</script>
+</body>
+</html>

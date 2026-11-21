@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeRoute — Admin</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<main class="section">
+  <div class="container">
+    <p class="eyebrow">ADMIN</p>
+    <h2>Administration panel.</h2>
+    <div class="grid-4" style="margin:24px 0">
+      <div class="card"><div class="stat-number" style="font-size:32px">8</div><div class="stat-label">Users</div></div>
+      <div class="card"><div class="stat-number" style="font-size:32px">40</div><div class="stat-label">Reports</div></div>
+      <div class="card"><div class="stat-number" style="font-size:32px">6</div><div class="stat-label">Duplicates</div></div>
+      <div class="card"><div class="stat-number" style="font-size:32px">73%</div><div class="stat-label">Verification Rate</div></div>
+    </div>
+    <div class="card">
+      <h4>User Management</h4>
+      <table style="width:100%;margin-top:12px;border-collapse:collapse">
+        <tr style="border-bottom:1px solid var(--border)"><th style="text-align:left;padding:8px">Name</th><th style="text-align:left;padding:8px">Role</th><th style="text-align:left;padding:8px">Actions</th></tr>
+        ${window.SR? '': ''}
+      </table>
+    </div>
+  </div>
+</main>
+<div id="footer-placeholder"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/config.js"></script>
+<script src="../js/supabase.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/api.js"></script>
+<script>
+const users = window.SR.mock.users;
+const tbody = document.querySelector('table');
+users.forEach(u=>{
+  const tr = document.createElement('tr');
+  tr.style.borderBottom='1px solid var(--border)';
+  tr.innerHTML = `<td style="padding:8px">${u.name}</td><td style="padding:8px">${u.role}</td><td style="padding:8px"><button class="btn btn-ghost" onclick="SR.toast('Role changed','info')">Change Role</button></td>`;
+  tbody.appendChild(tr);
+});
+SR.injectLayout('Dashboard');
+</script>
+</body>
+</html>

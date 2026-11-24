@@ -28,7 +28,7 @@ useMockData: true
 
 Demo reports, community responses and evidence previews are stored in the current browser's local storage. They are not shared with other users or synced to Supabase.
 
-To enable Supabase mode:
+To enable Supabase mode:-
 
 1. Set `supabaseUrl` and `supabaseAnonKey` in `js/config.js` (use the publishable/anon key only).
 2. Set `useMockData: false`.

@@ -81,5 +81,6 @@ SR.MapView = (function(){
     window.addEventListener('resize',invalidate);
     setTimeout(invalidate,200);
   }
+  
   return {init,refresh,setFilter,getMap:()=>map};
 })();
